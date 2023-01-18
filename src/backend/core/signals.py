@@ -81,13 +81,21 @@ def passThroughProfile(sender, instance, *args, **kwargs):
 
                 Notification.objects.create(user=instance.user, message=msg)
 
+@receiver(post_save,sender=Account)
+def createProfileIfNotExists(sender,instance,created,**kwargs):
+
+    if created:
+
+        profile = Profile.objects.filter(user=instance.user)
+        if not profile.exists():
+            Profile.objects.create(user=instance.user)      
 
 @receiver(pre_save, sender=Account)
 def checkAccount(sender, instance, **kwargs):
 
     # If Instance/row is been created,then do nothing
     if instance.id is None:
-        pass
+        pass        
 
     # Else if it is being modified
 
@@ -119,6 +127,7 @@ def checkAccount(sender, instance, **kwargs):
 
             Notification.objects.create(user=instance.user, message=msg)
 
+###########################################DEPOSIT SIGNALS###################################################
 
 @receiver(pre_save, sender=Deposit)
 def checkIfUserCanDepositMoney(sender, instance: Account, **kwargs):
@@ -165,6 +174,11 @@ def checkIfUserCanDepositMoney(sender, instance: Account, **kwargs):
 
                     reciever_account.balance = reciever_account.balance + amount_send
                     reciever_account.save()
+                    
+                    instance.sender = sender_account
+                    instance.reciever = reciever_account
+
+
                     instance.status = state.DEPOSIT_SUCCESSFULL
 
             else:
@@ -173,6 +187,7 @@ def checkIfUserCanDepositMoney(sender, instance: Account, **kwargs):
                 Notification.objects.create(user=sender_account.user, message="Your account balance is insufficent to perform the transaction. Please fill you account and retry later!\nCurrent account balance {}".format(
                     sender_account.get_balance()), type=notification_status.NOTIFCATION_WITHDRAW_REJECTED)
 
+####################################TRANSFER SIGNALS##############################################################
 
 @receiver(pre_save, sender=Transfer)
 def checkIfUserCanTransferMoney(sender, instance, **kwargs):
@@ -220,6 +235,9 @@ def checkIfUserCanTransferMoney(sender, instance, **kwargs):
                     reciever_account.balance = reciever_account.balance + amount_send
                     reciever_account.save()
 
+                    instance.sender = sender_account
+                    instance.reciever = reciever_account
+
                     instance.status = state.TRANSFER_SUCCESSFULL
 
             else:
@@ -248,10 +266,11 @@ def sendNotificationsToAccounst(sender, instance, created, **kwargs):
         instance.save()
 
 
+##################################WITHDRAW SIGNALS#############################################
+
 @receiver(pre_save, sender=Withdraw)
 def accept_or_deny(sender, instance, **kwargs):
 
-    print(kwargs)
     """_summary_
 
     Args:
@@ -313,8 +332,12 @@ def accept_or_deny(sender, instance, **kwargs):
                     withdraw_from.balance = float(balance) - amount_to_withdraw
                     withdraw_from.save()
 
+
                     agent.balance = float(agent.balance) + amount_to_withdraw
                     agent.save()
+
+                    instance.withdraw_from = withdraw_from
+                    instance.agent = agent
 
                     instance.charge = charge
 

@@ -8,7 +8,7 @@ run:
 	clear
 	$(VENV) manage.py runserver
 run-lan:
-	$(VENV) manage.py runserver 192.168.8.103:8000
+	$(VENV) manage.py runserver 192.168.8.101:8000
 
 migrations:
 	clear
@@ -76,3 +76,10 @@ docker-bash:
 
 docker-shell:
 	docker exec -it django_backend sh
+
+docker-stop:
+	docker stop $(docker ps -a -q)
+	docker rm $(docker ps -a -q)
+
+docker-remove-all:
+	docker rm $(docker ps -a -f status=exited -q)
